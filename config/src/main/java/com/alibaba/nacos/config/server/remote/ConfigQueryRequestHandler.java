@@ -259,28 +259,23 @@ public class ConfigQueryRequestHandler extends RequestHandler<ConfigQueryRequest
      * @return
      */
     public static String readFileContent(File file) {
-        BufferedReader reader = null;
-        StringBuffer sbf = new StringBuffer();
-        try {
-            reader = new BufferedReader(new FileReader(file));
+
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+
             String tempStr;
             while ((tempStr = reader.readLine()) != null) {
-                sbf.append(tempStr);
+                // FIXME readLine lose '\n'
+                sb.append(tempStr).append('\n');
             }
-            reader.close();
-            return sbf.toString();
+            // cut the last '\n';
+            sb.setLength(sb.length() - 1);
+
+            return sb.toString();
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            if (reader != null) {
-                try {
-                    reader.close();
-                } catch (IOException ex) {
-                    ex.printStackTrace();
-                }
-            }
         }
-        return sbf.toString();
+        return sb.toString();
     }
     
     private static void releaseConfigReadLock(String groupKey) {
