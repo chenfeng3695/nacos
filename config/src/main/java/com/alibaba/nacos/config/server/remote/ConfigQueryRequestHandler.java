@@ -259,28 +259,22 @@ public class ConfigQueryRequestHandler extends RequestHandler<ConfigQueryRequest
      * @return
      */
     public static String readFileContent(File file) {
-        BufferedReader reader = null;
-        StringBuffer sbf = new StringBuffer();
-        try {
-            reader = new BufferedReader(new FileReader(file));
+
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+
             String tempStr;
             while ((tempStr = reader.readLine()) != null) {
-                sbf.append(tempStr);
+                // FIXME readLine lose '\n', It may not be restored because the content is inconsistent. The MD5 value of the client is different from that of the server
+                sb.append(tempStr).append('\n');
             }
-            reader.close();
-            return sbf.toString();
+            sb.setLength(sb.length() - 1);
+
+            return sb.toString();
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            if (reader != null) {
-                try {
-                    reader.close();
-                } catch (IOException ex) {
-                    ex.printStackTrace();
-                }
-            }
         }
-        return sbf.toString();
+        return sb.toString();
     }
     
     private static void releaseConfigReadLock(String groupKey) {
