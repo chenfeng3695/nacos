@@ -73,14 +73,14 @@ public class NacosRoleServiceImpl {
     private volatile Map<String, List<PermissionInfo>> permissionInfoMap = new ConcurrentHashMap<>();
     
     /**
-     * Cache permission Pattern.
+     * Cache regex pattern.
      */
-    private final Map<String, Pattern> permissionPatternCacheMap = new ConcurrentHashMap<>();
+    private final Map<String, Pattern> regexPatternCacheMap = new ConcurrentHashMap<>();
     
     /**
-     * Cache permission regex result.
+     * Cache regex match result.
      */
-    private final Map<String, Boolean> permissionResourceResultCacheMap = new ConcurrentHashMap<>();
+    private final Map<String, Boolean> regexMatchResultCacheMap = new ConcurrentHashMap<>();
     
     @Scheduled(initialDelay = 5000, fixedDelay = 15000)
     private void reload() {
@@ -157,7 +157,7 @@ public class NacosRoleServiceImpl {
             for (PermissionInfo permissionInfo : permissionInfoList) {
                 String permissionResource = permissionInfo.getResource().replaceAll("\\*", ".*");
                 String permissionAction = permissionInfo.getAction();
-                if (permissionAction.contains(permission.getAction()) && checkPermissionRegex(permissionResource,
+                if (permissionAction.contains(permission.getAction()) && regexMatchWithCache(permissionResource,
                         permission.getResource())) {
                     return true;
                 }
@@ -167,13 +167,15 @@ public class NacosRoleServiceImpl {
     }
     
     /**
-     * Permission regex check {@param targetPermissionResource} with {@link #permissionResourceResultCacheMap}.
+     * Check {@param targetMatch} with catch in {@link #regexMatchResultCacheMap} and {@link #regexPatternCacheMap}.
+     * <p>
+     * It's not about roles or permissions, only with {@param regex} '@regexMatch@' {@param targetMatch} and the result
+     * cache; If roles or permissions change, there may be redundant caches.
+     * </p>
      */
-    private Boolean checkPermissionRegex(final String regexPermissionResource, final String targetPermissionResource) {
-        return permissionResourceResultCacheMap
-                .computeIfAbsent(regexPermissionResource + "@permission@" + targetPermissionResource,
-                        key -> permissionPatternCacheMap.computeIfAbsent(regexPermissionResource, Pattern::compile)
-                                .matcher(targetPermissionResource).matches());
+    private Boolean regexMatchWithCache(final String regex, final String targetMatch) {
+        return regexMatchResultCacheMap.computeIfAbsent(regex + "@regexMatch@" + targetMatch,
+                key -> regexPatternCacheMap.computeIfAbsent(regex, Pattern::compile).matcher(targetMatch).matches());
     }
     
     public List<RoleInfo> getRoles(String username) {
@@ -198,8 +200,7 @@ public class NacosRoleServiceImpl {
     public List<PermissionInfo> getPermissions(String role) {
         List<PermissionInfo> permissionInfoList = permissionInfoMap.get(role);
         if (!authConfigs.isCachingEnabled()) {
-            Page<PermissionInfo> permissionInfoPage = getPermissionsFromDatabase(role, DEFAULT_PAGE_NO,
-                    Integer.MAX_VALUE);
+            Page<PermissionInfo> permissionInfoPage = getPermissionsFromDatabase(role, DEFAULT_PAGE_NO, Integer.MAX_VALUE);
             if (permissionInfoPage != null) {
                 permissionInfoList = permissionInfoPage.getPageItems();
             }
