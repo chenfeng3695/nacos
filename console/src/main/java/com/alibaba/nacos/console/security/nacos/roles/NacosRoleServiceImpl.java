@@ -73,11 +73,6 @@ public class NacosRoleServiceImpl {
     private volatile Map<String, List<PermissionInfo>> permissionInfoMap = new ConcurrentHashMap<>();
     
     /**
-     * Cache regex pattern.
-     */
-    private final Map<String, Pattern> regexPatternCacheMap = new ConcurrentHashMap<>();
-    
-    /**
      * Cache regex match result.
      */
     private final Map<String, Boolean> regexMatchResultCacheMap = new ConcurrentHashMap<>();
@@ -167,15 +162,15 @@ public class NacosRoleServiceImpl {
     }
     
     /**
-     * Check {@param targetMatch} with catch in {@link #regexMatchResultCacheMap} and {@link #regexPatternCacheMap}.
+     * Check {@param targetMatch} with catch in {@link #regexMatchResultCacheMap}.
      * <p>
      * It's not about roles or permissions, only with {@param regex} '@regexMatch@' {@param targetMatch} and the result
      * cache; If roles or permissions change, there may be redundant caches.
      * </p>
      */
     private Boolean regexMatchWithCache(final String regex, final String targetMatch) {
-        return regexMatchResultCacheMap.computeIfAbsent(regex + "@regexMatch@" + targetMatch,
-                key -> regexPatternCacheMap.computeIfAbsent(regex, Pattern::compile).matcher(targetMatch).matches());
+        return regexMatchResultCacheMap
+                .computeIfAbsent(regex + "@regexMatch@" + targetMatch, key -> Pattern.matches(regex, targetMatch));
     }
     
     public List<RoleInfo> getRoles(String username) {
